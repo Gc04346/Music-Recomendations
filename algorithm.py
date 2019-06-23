@@ -1,20 +1,22 @@
 import pandas as pd
 import numpy as np
-import math
 import operator
 from copy import deepcopy
 
-# genre = pd.read_csv("genre.csv")
-# hits = pd.read_csv("hits.csv")
-music_data = pd.read_csv("music_data.csv")
-# state = pd.read_csv("state.csv")
-# target = pd.read_csv("target.csv")
-hits = pd.read_csv("hits.csv")
-# print(hits.head())
 # users = pd.read_csv("users_musics.csv")
-# modelo do vetor usr = [0,[[105301,69],[51,0],...]]
+# print(users)
+music_data = pd.read_csv("music_data.csv")
+hits = pd.read_csv("hits.csv")
+
+# variaveis de controle para melhorar a legibilidade do codigo
+music_id = 0
+music = 1
+music_value = 4
+usr_id = 0
+usr_musics = 1
 
 musics = [[]for i in range(100)]
+# modelo do vetor usr = [0,[[105301,69],[51,0],...]]
 # numUsers = hits.groupby(['user_id']).count()
 users = [[]for i in range(1500)]
 
@@ -26,33 +28,35 @@ top_musics = np.array(music_data['music_id'][:100])
 for i in range(len(top_musics)):
     musics[i].append(top_musics[i])
     musics[i].append(0)
-k = 0
-for i in range(1500):
-    users[i] = [hits.iloc[k, 0], musics]
-for j in range(1500):  # len(hits)
-    if k < len(hits):
-        listaMusicas = deepcopy(musics)
-        while hits.iloc[k, 0] == j:
-            # tenho que achar o music_id daquela linha em musics(dentro de users) e atribuir hits.iloc[linha][4] no lugar do 0
-            musica = hits.iloc[k, 1]
-            for i in range(len(top_musics)):
-                if users[j][1][i][0] == musica:
-                    listaMusicas[i][1] = hits.iloc[k][4]
-            k += 1
-        users[j] = [hits.iloc[k, 0], listaMusicas]
 
-def distance(data1, data2, length):
+linha = 0
+for j in range(1500):
+    users[j] = [hits.iloc[linha, usr_id], musics]
+    if linha < len(hits):
+        listaMusicas = deepcopy(musics)
+        while hits.iloc[linha, music_id] == j:
+            # tenho que achar o music_id daquela linha em musics(dentro de users) e atribuir hits.iloc[linha][4] no lugar do 0
+            musica = hits.iloc[linha, music]
+            for i in range(len(top_musics)):
+                if users[j][usr_musics][i][music_id] == musica:
+                    listaMusicas[i][music] = hits.iloc[linha][music_value]
+            linha += 1
+        users[j] = [hits.iloc[linha, usr_id], listaMusicas]
+
+
+def distance(user_target, one_user, length):
     dist = 0
     for i in range(length):
-        dist += np.square(data1[1][i][1] - data2[1][i][1])
+        dist += np.square(user_target[1][i][1] - one_user[1][i][1])
     return np.sqrt(dist)
 
 
-def knearest(training, testing, k):
+def knearest(all_users, user_target, k):
     distances = {}
-    length = len(testing[1])
-    for i in range(len(training)):
-        dist = distance(testing, training[i], length)
+    length = len(user_target[1])
+
+    for i in range(len(all_users)):
+        dist = distance(user_target, all_users[i], length)
         distances[i] = dist
 
     # sortedDistances tem, de forma ordenada crescente, os usuarios com o gosto mais parecido com o que eu passei. na posicao 0
@@ -79,28 +83,39 @@ def knearest(training, testing, k):
     #na funcao get_recomendations, eu fatio o vetor recomendacoes no numero n de recomendacoes que passar como parametro         
     '''
     usuariosParecidos = [[]for i in range(k)]
+
     for i in range(k):
         usuariosParecidos[i] += sortedDistances[i]
     # aqui, em usuariosParecidos, eu tenho o id do usuario mais parecido e a distancia vetorial entre ele e user target
+
     vetComb = musics
+
     for i in range(len(usuariosParecidos)):
-        usrTemp = users[usuariosParecidos[i][0]]
-        for ind in range(len(usrTemp[1])): # quantidade de musicas que tem no top do usrTemp. seria melhor usar isso ou len(top_musics)?
+        usrTemp = users[usuariosParecidos[i][usr_id]]
+        for ind in range(len(usrTemp[usr_musics])): # quantidade de musicas que tem no top do usrTemp. seria melhor usar isso ou len(top_musics)?
             vetComb[ind][1] += usrTemp[1][ind][1]
+
     recomendacoes = [[]for i in range(len(vetComb))]
+
     for i in range(len(vetComb)):  # nao seria melhor so pegar as musicas que o user_target ainda nao ouviu?
         recomendacoes[i].append(vetComb[i][0])  # recomendacoes[i][0] tem o id da musica
-        recomendacoes[i].append(vetComb[i][1] - testing[1][i][1])  # recomendacoes[i][1] tem o valor subtraido do quanto os usuarios parecidos escutaram aquela musica com o quanto o user_target a ouviu
-    sortedRecomendacoes = sorted(recomendacoes, key=operator.itemgetter(1), reverse=True)
+        recomendacoes[i].append(vetComb[i][1] - user_target[1][i][1])  # recomendacoes[i][1] tem o valor subtraido do quanto os usuarios parecidos escutaram aquela musica com o quanto o user_target a ouviu
 
+    sortedRecomendacoes = sorted(recomendacoes, key=operator.itemgetter(1), reverse=True)
     finalRecomendations = []
+
     for i in range(len(sortedRecomendacoes)):
         finalRecomendations.append(sortedRecomendacoes[i][0])
+
     return finalRecomendations
 
 
-def getRecomendations(n):
-    return knearest(users, users[0], 1)[:n]
+def getRecommendations(n):
+    recommended = knearest(users, users[0], 1)[:n]
+    recommendations = {
+        "user_id": users[0][0],
+        "recommendations": recommended
+    }
+    return recommendations
 
-
-print(getRecomendations(5))
+print(getRecommendations(5))
