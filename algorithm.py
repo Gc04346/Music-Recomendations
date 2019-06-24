@@ -36,14 +36,15 @@ linha = 0
 for j in range(numUsers):
     users[j] = [hits.iloc[linha, usr_id], musics]  # users[j] = [user_id, vetor base com os top 100 hits]
     if linha < len(hits):  # if usado para garantir que na última iteração não ocorra um index out of bounds
+        # resetando listaMusicas para que cada usuário tenha um vetor limpo inicialmente:
         listaMusicas = deepcopy(musics)  # deepcopy para que apenas os valores de musics sejam transferidos para listaMusicas. Particularidade da linguagem Python.
         while hits.iloc[linha, usr_id] == j:  # hits tem várias linhas de informação para cada usuário. Enquanto eu estiver no mesmo usuário faça:
             musica = hits.iloc[linha, music]
             for i in range(len(top_musics)):
-                if users[j][usr_musics][i][music_id] == musica:
+                if users[j][usr_musics][i][music_id] == musica:  # se a musica atual em hits existir no vetor do usuario(tambem vale: se estiver no top 100)
                     listaMusicas[i][music] = hits.iloc[linha][music_value]
             linha += 1
-        users[j] = [hits.iloc[linha, usr_id], listaMusicas]
+        users[j] = [hits.iloc[linha, usr_id], listaMusicas]  # atribui listaMusicas com os valores atualizados daquele usuário à sua matriz
 
 
 def distance(user_target, one_user, length):
@@ -55,14 +56,14 @@ def distance(user_target, one_user, length):
 
 def knearest(all_users, user_target, k):
     distances = {}
-    length = len(user_target[1])
+    length = len(user_target[1])  # user_target[1] se refere à segunda coluna de user, que contém os top hits
 
     for i in range(len(all_users)):
         dist = distance(user_target, all_users[i], length)
         distances[i] = dist
 
-    # sortedDistances tem, de forma ordenada crescente, os usuarios com o gosto mais parecido com o que eu passei. na posicao 0
-    # eu tenho o usuario mais parecido com o que eu passei.
+    # sortedDistances tem, de forma ordenada crescente, os usuarios com o gosto mais parecido com o que eu passei.
+    # na posicao 0 eu tenho o usuario mais parecido com o que eu passei.
     sortedDistances = sorted(distances.items(), key=operator.itemgetter(1))
 
     '''
@@ -88,18 +89,18 @@ def knearest(all_users, user_target, k):
 
     for i in range(k):
         usuariosParecidos[i] += sortedDistances[i]
-    # aqui, em usuariosParecidos, eu tenho o id do usuario mais parecido e a distancia vetorial entre ele e user target
+    # aqui, em usuariosParecidos, eu tenho o id dos usuarios mais parecidos e a distancia vetorial entre cada um deles e user target
 
     vetComb = musics
 
     for i in range(len(usuariosParecidos)):
         usrTemp = users[usuariosParecidos[i][usr_id]]
-        for ind in range(len(usrTemp[usr_musics])): # quantidade de musicas que tem no top do usrTemp. seria melhor usar isso ou len(top_musics)?
-            vetComb[ind][1] += usrTemp[1][ind][1]
+        for ind in range(len(usrTemp[usr_musics])): # quantidade de musicas que tem no top do usrTemp
+            vetComb[ind][1] += usrTemp[usr_musics][ind][music_value]
 
     recomendacoes = [[]for i in range(len(vetComb))]
 
-    for i in range(len(vetComb)):  # nao seria melhor so pegar as musicas que o user_target ainda nao ouviu?
+    for i in range(len(vetComb)):
         recomendacoes[i].append(vetComb[i][0])  # recomendacoes[i][0] tem o id da musica
         recomendacoes[i].append(vetComb[i][1] - user_target[1][i][1])  # recomendacoes[i][1] tem o valor subtraido do quanto os usuarios parecidos escutaram aquela musica com o quanto o user_target a ouviu
 
